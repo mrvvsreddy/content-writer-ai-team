@@ -15,6 +15,19 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
+import logging
+
+# ── Suppress Conflict tracebacks from python-telegram-bot ──
+class _SuppressConflictFilter(logging.Filter):
+    def filter(self, record):
+        if record.exc_info:
+            _, exc_value, _ = record.exc_info
+            if isinstance(exc_value, Conflict):
+                return False
+        return True
+
+for logger_name in ["telegram.ext.Updater", "telegram.ext._updater", "telegram.ext._utils.networkloop"]:
+    logging.getLogger(logger_name).addFilter(_SuppressConflictFilter())
 
 from app.core.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from app.agent.graph import run_agent
