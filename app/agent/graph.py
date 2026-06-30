@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 
-from app.core.config import OPENROUTER_API_KEY
+from app.core.config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 from app.agent.tools import (
     # Read tools
     check_pipeline_status,
@@ -77,7 +77,7 @@ SYSTEM_PROMPT = SystemMessage(content=(
 llm = ChatOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
-    model="deepseek/deepseek-chat-v3.1",
+    model=OPENROUTER_MODEL,
     temperature=0.5,
     max_tokens=1000,
 )

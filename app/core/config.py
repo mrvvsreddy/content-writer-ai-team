@@ -8,6 +8,7 @@ load_dotenv()
 
 # ── OpenRouter Config ──────────────────────────────────────────
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1")
 
 # ── Supabase Config ───────────────────────────────────────────
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")

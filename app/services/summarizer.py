@@ -4,7 +4,7 @@ app.services.summarizer — Generates AI summaries via OpenRouter.
 import time
 from pathlib import Path
 from openai import OpenAI
-from app.core.config import OPENROUTER_API_KEY
+from app.core.config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 
 # Initialize the OpenAI client for OpenRouter
 client = OpenAI(
@@ -12,8 +12,8 @@ client = OpenAI(
     api_key=OPENROUTER_API_KEY,
 )
 
-# Use the specific model requested by the user
-TARGET_MODEL = "deepseek/deepseek-chat-v3.1"
+# Model from environment config
+TARGET_MODEL = OPENROUTER_MODEL
 
 def generate_summary(text, title):
     """
