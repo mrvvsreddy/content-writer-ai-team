@@ -49,24 +49,30 @@ async def _run_health_check():
     alerts = []
 
     # Check article status counts
-    counts = await asyncio.to_thread(get_status_counts)
-    failed = counts.get("FAILED", 0)
-    pending = counts.get("PENDING", 0)
+    try:
+        counts = await asyncio.to_thread(get_status_counts)
+        failed = counts.get("FAILED", 0)
+        pending = counts.get("PENDING", 0)
 
-    if failed >= FAILURE_THRESHOLD:
-        alerts.append(
-            f"🚨 *High failure rate:* {failed} articles have FAILED.\n"
-            f"   → Reply: _\"retry failed articles\"_ or _\"purge failed articles\"_"
-        )
+        if failed >= FAILURE_THRESHOLD:
+            alerts.append(
+                f"🚨 *High failure rate:* {failed} articles have FAILED.\n"
+                f"   → Reply: _\"retry failed articles\"_ or _\"purge failed articles\"_"
+            )
+    except Exception as e:
+        print(f"[Monitor] ❌ Failed to check status counts: {e}")
 
     # Check for blocked feeds
-    blocked = await asyncio.to_thread(get_blocked_feeds)
-    if blocked:
-        feed_lines = "\n".join(f"  • `{f['feed_url']}`" for f in blocked)
-        alerts.append(
-            f"🚫 *{len(blocked)} feed(s) blocked:*\n{feed_lines}\n"
-            f"   → Reply: _\"unblock feed <url>\"_"
-        )
+    try:
+        blocked = await asyncio.to_thread(get_blocked_feeds)
+        if blocked:
+            feed_lines = "\n".join(f"  • `{f['feed_url']}`" for f in blocked)
+            alerts.append(
+                f"🚫 *{len(blocked)} feed(s) blocked:*\n{feed_lines}\n"
+                f"   → Reply: _\"unblock feed <url>\"_"
+            )
+    except Exception as e:
+        print(f"[Monitor] ❌ Failed to check blocked feeds: {e}")
 
     if alerts:
         header = "🤖 *Proactive Pipeline Alert*\n\n"

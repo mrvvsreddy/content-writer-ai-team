@@ -7,6 +7,7 @@ and replies with the agent's response.
 """
 import asyncio
 from telegram import Update
+from telegram.error import Conflict, TimedOut, NetworkError
 from telegram.ext import (
     Application,
     MessageHandler,
@@ -22,6 +23,8 @@ from app.agent.graph import run_agent
 # ── Security: only respond to the admin ────────────────────────
 def _is_admin(update: Update) -> bool:
     """Check if the message is from the configured admin chat."""
+    if not update.effective_chat:
+        return False
     return str(update.effective_chat.id) == str(TELEGRAM_CHAT_ID)
 
 
@@ -49,7 +52,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Show "typing..." indicator while the agent processes
-    await update.effective_chat.send_action("typing")
+    try:
+        await update.effective_chat.send_action("typing")
+    except Exception:
+        pass  # Non-critical — don't fail the message handler
 
     try:
         # Run the LangGraph agent
@@ -57,9 +63,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(response)
     except Exception as e:
         print(f"[TelegramBot] Agent error: {e}")
-        await update.message.reply_text(
-            f"❌ Sorry, something went wrong:\n{str(e)[:200]}"
-        )
+        try:
+            await update.message.reply_text(
+                f"❌ Sorry, something went wrong:\n{str(e)[:200]}"
+            )
+        except Exception as send_err:
+            print(f"[TelegramBot] Failed to send error reply: {send_err}")
+
+
+# ── Global error handler ──────────────────────────────────────
+async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Global error handler registered on the Application.
+    Catches polling-level errors (Conflict, NetworkError, TimedOut)
+    without crashing or spamming the terminal.
+    """
+    error = context.error
+
+    if isinstance(error, Conflict):
+        # This happens during Uvicorn reloads when two instances
+        # momentarily compete for getUpdates. It resolves itself.
+        print("[TelegramBot] ⚠ Polling conflict (deploy overlap) — will auto-resolve.")
+        return
+
+    if isinstance(error, TimedOut):
+        print("[TelegramBot] ⚠ Network timeout — retrying automatically.")
+        return
+
+    if isinstance(error, NetworkError):
+        print(f"[TelegramBot] ⚠ Network error: {error} — retrying automatically.")
+        return
+
+    # For any other unexpected error, log it fully
+    print(f"[TelegramBot] ❌ Unhandled error: {error}")
 
 
 # ── Bot lifecycle ──────────────────────────────────────────────
@@ -75,15 +111,26 @@ async def start_telegram_bot():
 
     print("[TelegramBot] 🤖 Starting AI agent bot...")
 
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    try:
+        app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    except Exception as e:
+        print(f"[TelegramBot] ❌ Failed to build bot application: {e}")
+        return
 
     # Register handlers
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+    # Register the global error handler to suppress Conflict spam
+    app.add_error_handler(_error_handler)
+
     # Initialize the app
-    await app.initialize()
-    await app.start()
+    try:
+        await app.initialize()
+        await app.start()
+    except Exception as e:
+        print(f"[TelegramBot] ❌ Failed to initialize bot: {e}")
+        return
 
     print("[TelegramBot] ✅ Bot is listening for messages from admin.")
 
@@ -95,12 +142,17 @@ async def start_telegram_bot():
                     # Starting polling in background. This handles transient deploy conflicts
                     # by retrying until the old deploy's bot releases the hook/polling limit.
                     await app.updater.start_polling(drop_pending_updates=True)
+                except Conflict:
+                    print("[TelegramBot] ⚠ Polling conflict on startup — retrying in 5s...")
                 except Exception as e:
                     print(f"[TelegramBot] ⚠️ Failed to start polling (will retry): {e}")
             await asyncio.sleep(5)
     except asyncio.CancelledError:
         print("[TelegramBot] 🛑 Shutting down bot...")
-        if app.updater.running:
-            await app.updater.stop()
-        await app.stop()
-        await app.shutdown()
+        try:
+            if app.updater.running:
+                await app.updater.stop()
+            await app.stop()
+            await app.shutdown()
+        except Exception as e:
+            print(f"[TelegramBot] ⚠ Error during shutdown (ignored): {e}")

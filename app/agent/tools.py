@@ -26,17 +26,20 @@ def check_pipeline_status() -> str:
     Returns the number of articles in each status:
     PENDING, SCRAPED, SUMMARISED, POSTED, and FAILED.
     """
-    counts = get_status_counts()
-    total = sum(counts.values())
-    lines = [
-        f"📊 Pipeline Status (Total: {total} articles)",
-        f"  ⏳ Pending:     {counts.get('PENDING', 0)}",
-        f"  🔄 Scraped:     {counts.get('SCRAPED', 0)}",
-        f"  📝 Summarised:  {counts.get('SUMMARISED', 0)}",
-        f"  ✅ Posted:      {counts.get('POSTED', 0)}",
-        f"  ❌ Failed:      {counts.get('FAILED', 0)}",
-    ]
-    return "\n".join(lines)
+    try:
+        counts = get_status_counts()
+        total = sum(counts.values())
+        lines = [
+            f"📊 Pipeline Status (Total: {total} articles)",
+            f"  ⏳ Pending:     {counts.get('PENDING', 0)}",
+            f"  🔄 Scraped:     {counts.get('SCRAPED', 0)}",
+            f"  📝 Summarised:  {counts.get('SUMMARISED', 0)}",
+            f"  ✅ Posted:      {counts.get('POSTED', 0)}",
+            f"  ❌ Failed:      {counts.get('FAILED', 0)}",
+        ]
+        return "\n".join(lines)
+    except Exception as e:
+        return f"❌ Failed to fetch pipeline status: {e}"
 
 
 @tool
@@ -44,9 +47,12 @@ def check_pending_count() -> str:
     """
     Check only the number of articles currently waiting to be processed (PENDING).
     """
-    counts = get_status_counts()
-    pending = counts.get("PENDING", 0)
-    return f"⏳ There are {pending} articles currently pending."
+    try:
+        counts = get_status_counts()
+        pending = counts.get("PENDING", 0)
+        return f"⏳ There are {pending} articles currently pending."
+    except Exception as e:
+        return f"❌ Failed to fetch pending count: {e}"
 
 
 @tool
@@ -54,9 +60,12 @@ def check_completed_count() -> str:
     """
     Check the number of articles that have been successfully posted.
     """
-    counts = get_status_counts()
-    posted = counts.get("POSTED", 0)
-    return f"✅ {posted} articles have been successfully posted."
+    try:
+        counts = get_status_counts()
+        posted = counts.get("POSTED", 0)
+        return f"✅ {posted} articles have been successfully posted."
+    except Exception as e:
+        return f"❌ Failed to fetch completed count: {e}"
 
 
 @tool
@@ -65,13 +74,16 @@ def check_blocked_feeds() -> str:
     List all RSS feeds that are currently blocked due to site-blocking errors.
     Shows which feeds are paused and when they will be unblocked.
     """
-    blocked = get_blocked_feeds()
-    if not blocked:
-        return "✅ No feeds are currently blocked. All feeds are active."
-    lines = [f"🚫 {len(blocked)} feed(s) currently blocked:"]
-    for feed in blocked:
-        lines.append(f"  • {feed['feed_url']} — until {feed['blocked_until']}")
-    return "\n".join(lines)
+    try:
+        blocked = get_blocked_feeds()
+        if not blocked:
+            return "✅ No feeds are currently blocked. All feeds are active."
+        lines = [f"🚫 {len(blocked)} feed(s) currently blocked:"]
+        for feed in blocked:
+            lines.append(f"  • {feed['feed_url']} — until {feed['blocked_until']}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"❌ Failed to fetch blocked feeds: {e}"
 
 
 # ═══════════════════════════════════════════════════════════════

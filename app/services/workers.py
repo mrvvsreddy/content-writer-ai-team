@@ -219,11 +219,24 @@ def process_article(article: dict) -> str:
         )
         return "failed"
         
-    # Replace watermarked image with open-source one
-    print(f"    🖼️ [Image] Fetching open-source image for: {title}")
-    better_image = get_open_source_image(title)
-    if better_image:
-        scraped["image"] = better_image
+    # ── Image handling: validate existing, fallback to DDG search ──
+    from app.services.image_search import is_valid_image_url
+
+    original_image = scraped.get("image", "")
+
+    if original_image and is_valid_image_url(original_image):
+        # The article's own og:image is valid — keep it
+        print(f"    🖼️ [Image] Using article's own image (valid)")
+    else:
+        # No image or broken URL — try DDG as fallback
+        print(f"    🖼️ [Image] No valid article image — searching DDG fallback...")
+        fallback_image = get_open_source_image(title)
+        if fallback_image:
+            scraped["image"] = fallback_image
+            print(f"    ✅ [Image] Found fallback image from DDG")
+        else:
+            scraped["image"] = ""
+            print(f"    ⚠️ [Image] No image found — posting without image")
 
     # Mark as SCRAPED
     mark_article_status(

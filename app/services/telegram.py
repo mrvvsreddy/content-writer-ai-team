@@ -47,14 +47,21 @@ def send_telegram_message(title: str, summary: str, article_url: str, image_url:
 
 def _send_text_only(text: str, chat_id: str) -> bool:
     """Helper to send a text-only message to Telegram."""
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "disable_web_page_preview": False
-    }
-    res = requests.post(url, json=payload, timeout=10)
-    if not res.ok:
-        print(f"    ❌ [Telegram] Failed to send text (HTTP {res.status_code}): {res.text}")
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "disable_web_page_preview": False
+        }
+        res = requests.post(url, json=payload, timeout=10)
+        if not res.ok:
+            print(f"    ❌ [Telegram] Failed to send text (HTTP {res.status_code}): {res.text}")
+            return False
+        return True
+    except requests.exceptions.RequestException as e:
+        print(f"    ❌ [Telegram] Network error in _send_text_only: {e}")
         return False
-    return True
+    except Exception as e:
+        print(f"    ❌ [Telegram] Unexpected error in _send_text_only: {e}")
+        return False
