@@ -81,19 +81,26 @@ async def start_telegram_bot():
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Initialize and start polling
+    # Initialize the app
     await app.initialize()
     await app.start()
-    await app.updater.start_polling(drop_pending_updates=True)
 
     print("[TelegramBot] ✅ Bot is listening for messages from admin.")
 
-    # Keep the bot running until cancelled
+    # Keep the bot running until cancelled, gracefully restarting polling on conflicts
     try:
         while True:
-            await asyncio.sleep(3600)
+            if not app.updater.running:
+                try:
+                    # Starting polling in background. This handles transient deploy conflicts
+                    # by retrying until the old deploy's bot releases the hook/polling limit.
+                    await app.updater.start_polling(drop_pending_updates=True)
+                except Exception as e:
+                    print(f"[TelegramBot] ⚠️ Failed to start polling (will retry): {e}")
+            await asyncio.sleep(5)
     except asyncio.CancelledError:
         print("[TelegramBot] 🛑 Shutting down bot...")
-        await app.updater.stop()
+        if app.updater.running:
+            await app.updater.stop()
         await app.stop()
         await app.shutdown()

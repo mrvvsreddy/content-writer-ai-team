@@ -1,7 +1,8 @@
 """
 app.services.image_search — Fetches open-source images based on query.
 """
-from duckduckgo_search import DDGS
+from ddgs import DDGS
+import itertools
 
 def get_open_source_image(query: str, max_results: int = 1) -> str:
     """
@@ -10,11 +11,8 @@ def get_open_source_image(query: str, max_results: int = 1) -> str:
     """
     try:
         with DDGS() as ddgs:
-            results = ddgs.images(
-                keywords=query,
-                max_results=max_results,
-            )
-            # DDGS().images returns a list of dicts
+            # We use itertools.islice in case images() returns a generator
+            results = itertools.islice(ddgs.images(query), max_results)
             for result in results:
                 image_url = result.get("image")
                 if image_url:
