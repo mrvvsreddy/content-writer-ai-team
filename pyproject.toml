@@ -1,0 +1,25 @@
+[project]
+name = "ai-news-scraper"
+version = "0.1.0"
+description = "AI News Aggregator — RSS scraping, summarization, and API"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "feedparser>=6.0.11",
+    "requests>=2.32.3",
+    "beautifulsoup4>=4.12.3",
+    "openai>=1.59.3",
+    "python-dotenv>=1.0.1",
+    "supabase>=2.15.2",
+    "langgraph>=0.4.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "python-telegram-bot>=21.0",
+    "httpx>=0.27.0",
+    "duckduckgo-search>=6.0.0",
+]
+
+[project.scripts]
+dev = "uvicorn app.main:app --reload"
